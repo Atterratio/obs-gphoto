@@ -128,7 +128,7 @@ static void gphoto_capture(void *vptr, uint8_t **texture_data){
     }
 
     if(image_data){
-        //free(image_data);
+        free(image_data);
     }
     if(image_info){
         DestroyImageInfo(image_info);
@@ -236,7 +236,7 @@ static void gphoto_init(void *vptr){
     }
 
     if(image_data){
-        //free(image_data);
+        free(image_data);
     }
     if(image_info){
         DestroyImageInfo(image_info);

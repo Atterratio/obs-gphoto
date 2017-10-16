@@ -11,7 +11,7 @@ Allows capture DSLR cameras preview through gPhoto in obs-studio on Linux. At no
 
 
 ------
-v0.0.1
+v0.1.1
 ------
 
 REQUIREMENTS
@@ -25,6 +25,6 @@ REQUIREMENTS
 INSTALLATION
 ============
 
-* :code:`cmake . -DCMAKE_BUILD_TYPE=Release` for local installation or :code:`cmake . -DCMAKE_BUILD_TYPE=Release -DSYSTEM_INSTALL=1` for system installation;
+* :code:`cmake . -DSYSTEM_INSTALL=0` for local installation or :code:`cmake . -DSYSTEM_INSTALL=1` for system installation;
 * :code:`make`;
 * :code:`make install`;

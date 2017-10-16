@@ -1,9 +1,10 @@
 cmake_minimum_required(VERSION 2.8)
 project(obs-gphoto)
 set(obs-gphoto_DESCRIPTION "Allows capture DSLR cameras preview through gPhoto in obs-studio on Linux")
-set (obs-gphoto_VERSION_MAJOR 0)
-set (obs-gphoto_VERSION_MINOR 0)
-set (obs-gphoto_VERSION_PATCH 1)
+set(obs-gphoto_VERSION_MAJOR 0)
+set(obs-gphoto_VERSION_MINOR 1)
+set(obs-gphoto_VERSION_PATCH 1)
+set(CMAKE_BUILD_TYPE Release)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules/")
 
@@ -52,14 +53,3 @@ if(${SYSTEM_INSTALL})
 else()
     install(DIRECTORY ${PLUGIN_DIRECTORY} DESTINATION $ENV{HOME}/.config/obs-studio/plugins USE_SOURCE_PERMISSIONS)
 endif()
-
-set(CPACK_PACKAGE_VERSION_MAJOR ${obs-gphoto_VERSION_MAJOR})
-set(CPACK_PACKAGE_VERSION_MINOR ${obs-gphoto_VERSION_MINOR})
-set(CPACK_PACKAGE_VERSION_PATCH ${obs-gphoto_VERSION_PATCH})
-
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Aeternus Atterratio")
-set(CPACK_DEBIAN_PACKAGE_DESCRIPTION ${obs-gphoto_DESCRIPTION})
-set(CPACK_DEBIAN_PACKAGE_SECTION 'video')
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "obs-studio, libgphoto2-6 (>=2.5.10), libmagickcore-6.q16-2, libudev1")
-
-include(CPack)
