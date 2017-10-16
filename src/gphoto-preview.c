@@ -1,6 +1,6 @@
 #include <magick/MagickCore.h>
 
-#include "live-preview.h"
+#include "gphoto-preview.h"
 #include "gphoto-utils.h"
 #if HAVE_UDEV
 #include "gphoto-udev.h"
@@ -8,17 +8,17 @@
 
 
 
-static const char *gphoto_getname(void *vptr) {
+static const char *capture_getname(void *vptr) {
     UNUSED_PARAMETER(vptr);
     return obs_module_text("gPhoto live preview capture");
 }
 
-static void gphoto_defaults(obs_data_t *settings) {
+static void capture_defaults(obs_data_t *settings) {
     obs_data_set_default_int(settings, "fps", 30);
 }
 
-static void gphoto_property_cam_list(void *vptr, obs_property_t *prop) {
-    struct gphoto_data *data = vptr;
+static void capture_property_cam_list(void *vptr, obs_property_t *prop) {
+    struct preview_data *data = vptr;
     int i, count;
     const char *camera_name;
 
@@ -32,7 +32,7 @@ static void gphoto_property_cam_list(void *vptr, obs_property_t *prop) {
     }
 }
 
-static bool gphoto_camera_selected(obs_properties_t *props, obs_property_t *prop, obs_data_t *settings){
+static bool capture_camera_selected(obs_properties_t *props, obs_property_t *prop, obs_data_t *settings){
     UNUSED_PARAMETER(props);
     UNUSED_PARAMETER(prop);
     obs_data_set_string(settings, "changed", "camera");
@@ -40,7 +40,7 @@ static bool gphoto_camera_selected(obs_properties_t *props, obs_property_t *prop
     return true;
 }
 
-static bool gphoto_fps_selected(obs_properties_t *props, obs_property_t *prop, obs_data_t *settings){
+static bool capture_fps_selected(obs_properties_t *props, obs_property_t *prop, obs_data_t *settings){
     UNUSED_PARAMETER(props);
     UNUSED_PARAMETER(prop);
     obs_data_set_string(settings, "changed", "fps");
@@ -48,8 +48,8 @@ static bool gphoto_fps_selected(obs_properties_t *props, obs_property_t *prop, o
     return true;
 }
 
-static obs_properties_t *gphoto_properties(void *vptr){
-    struct gphoto_data *data = vptr;
+static obs_properties_t *capture_properties(void *vptr){
+    struct preview_data *data = vptr;
 
     obs_properties_t *props = obs_properties_create();
     obs_data_t *settings = obs_source_get_settings(data->source);
@@ -57,8 +57,8 @@ static obs_properties_t *gphoto_properties(void *vptr){
     if(cam_count > 0) {
         obs_property_t *cam_list = obs_properties_add_list(props, "camera_name", obs_module_text("Camera"),
                                                            OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
-        gphoto_property_cam_list(data, cam_list);
-        obs_property_set_modified_callback(cam_list, gphoto_camera_selected);
+        capture_property_cam_list(data, cam_list);
+        obs_property_set_modified_callback(cam_list, capture_camera_selected);
 
 
         obs_property_t *fps_list = obs_properties_add_list(props, "fps", obs_module_text("FPS"),
@@ -66,7 +66,7 @@ static obs_properties_t *gphoto_properties(void *vptr){
         obs_property_list_add_int(fps_list, "25", 25);
         obs_property_list_add_int(fps_list, "30", 30);
         obs_property_list_add_int(fps_list, "60", 60);
-        obs_property_set_modified_callback(fps_list, gphoto_fps_selected);
+        obs_property_set_modified_callback(fps_list, capture_fps_selected);
 
         if (data->camera) {
             pthread_mutex_lock(&data->camera_mutex);
@@ -91,8 +91,8 @@ static obs_properties_t *gphoto_properties(void *vptr){
     return props;
 }
 
-static void gphoto_capture(void *vptr, uint8_t **texture_data){
-    struct gphoto_data *data = vptr;
+static void capture_capture(void *vptr, uint8_t **texture_data){
+    struct preview_data *data = vptr;
     CameraFile *cam_file = NULL;
     const char *image_data = NULL;
     unsigned long data_size = NULL;
@@ -145,8 +145,8 @@ static void gphoto_capture(void *vptr, uint8_t **texture_data){
     }
 }
 
-static void *gphoto_thread(void *vptr){
-    struct gphoto_data *data = vptr;
+static void *capture_thread(void *vptr){
+    struct preview_data *data = vptr;
     uint8_t *texture_data = malloc(data->width * data->height * 4);
     uint64_t cur_time = os_gettime_ns();
 
@@ -161,7 +161,7 @@ static void *gphoto_thread(void *vptr){
     while (os_event_try(data->event) == EAGAIN){
         frame.timestamp = cur_time;
         pthread_mutex_lock(&data->camera_mutex);
-        gphoto_capture(data, texture_data);
+        capture_capture(data, texture_data);
         pthread_mutex_unlock(&data->camera_mutex);
         obs_source_output_video(data->source, &frame);
         switch (data->fps){
@@ -185,16 +185,16 @@ static void *gphoto_thread(void *vptr){
     return NULL;
 }
 
-static int gphoto_cam_list(void *vptr){
-    struct gphoto_data *data = vptr;
+static int capture_cam_list(void *vptr){
+    struct preview_data *data = vptr;
     int ret;
     gp_list_reset(data->cam_list);
     ret = gp_camera_autodetect(data->cam_list, data->gp_context);
     return ret;
 }
 
-static void gphoto_init(void *vptr){
-    struct gphoto_data *data = vptr;
+static void capture_init(void *vptr){
+    struct preview_data *data = vptr;
     CameraFile *cam_file = NULL;
     const char *image_data = NULL;
     unsigned long data_size = NULL;
@@ -227,7 +227,7 @@ static void gphoto_init(void *vptr){
                             data->height = (uint32_t)image->magick_rows;
 
                             os_event_init(&data->event, OS_EVENT_TYPE_MANUAL);
-                            pthread_create(&data->thread, NULL, gphoto_thread, data);
+                            pthread_create(&data->thread, NULL, capture_thread, data);
                         }
                     }
                 }
@@ -249,8 +249,8 @@ static void gphoto_init(void *vptr){
     }
 }
 
-static void gphoto_terminate(void *vptr){
-    struct gphoto_data *data = vptr;
+static void capture_terminate(void *vptr){
+    struct preview_data *data = vptr;
 
     if(data->event) {
         os_event_signal(data->event);
@@ -265,17 +265,17 @@ static void gphoto_terminate(void *vptr){
     data->camera = NULL;
 }
 
-static void gphoto_update(void *vptr, obs_data_t *settings){
-    struct gphoto_data *data = vptr;
+static void capture_update(void *vptr, obs_data_t *settings){
+    struct preview_data *data = vptr;
 
     const char *changed = obs_data_get_string(settings, "changed");
 
     if (strcmp(changed, "camera") == 0) {
         data->camera_name = obs_data_get_string(settings, "camera_name");
         if (data->source->active) {
-            gphoto_terminate(data);
+            capture_terminate(data);
             pthread_mutex_lock(&data->camera_mutex);
-            gphoto_init(data);
+            capture_init(data);
             pthread_mutex_unlock(&data->camera_mutex);
             obs_source_update_properties(data->source);
             if(data->autofocus) {
@@ -318,19 +318,19 @@ static void gphoto_update(void *vptr, obs_data_t *settings){
 }
 
 #if HAVE_UDEV
-static void gphoto_camera_added(void *vptr, calldata_t *calldata) {
+static void capture_camera_added(void *vptr, calldata_t *calldata) {
     UNUSED_PARAMETER(calldata);
-    struct gphoto_data *data = vptr;
+    struct preview_data *data = vptr;
     int i, count;
     const char *camera_name;
     if(!data->camera){
         pthread_mutex_lock(&data->camera_mutex);
-        gphoto_cam_list(data);
+        capture_cam_list(data);
         count = gp_list_count(data->cam_list);
         for(i=0; i<count; i++){
             gp_list_get_name(data->cam_list, i, &camera_name);
             if (strcmp(camera_name, data->camera_name) == 0) {
-                gphoto_init(data);
+                capture_init(data);
                 pthread_mutex_unlock(&data->camera_mutex);
                 obs_source_update_properties(data->source);
                 if(data->autofocus) {
@@ -345,14 +345,14 @@ static void gphoto_camera_added(void *vptr, calldata_t *calldata) {
     }
 }
 
-static void gphoto_camera_removed(void *vptr, calldata_t *calldata) {
+static void capture_camera_removed(void *vptr, calldata_t *calldata) {
     UNUSED_PARAMETER(calldata);
-    struct gphoto_data *data = vptr;
+    struct preview_data *data = vptr;
     int i, count;
     const char *camera_name;
     if(data->camera){
         pthread_mutex_lock(&data->camera_mutex);
-        gphoto_cam_list(data);
+        capture_cam_list(data);
         pthread_mutex_unlock(&data->camera_mutex);
         count = gp_list_count(data->cam_list);
         for(i=0; i<count; i++){
@@ -362,19 +362,19 @@ static void gphoto_camera_removed(void *vptr, calldata_t *calldata) {
                 return;
             }
         }
-        gphoto_terminate(data);
+        capture_terminate(data);
         obs_source_update_properties(data->source);
     }
 }
 #endif
 
-static void gphoto_show(void *vptr) {
-    struct gphoto_data *data = vptr;
+static void capture_show(void *vptr) {
+    struct preview_data *data = vptr;
     if (strcmp(data->camera_name, "") != 0) {
         if (!data->source->active && !data->camera) {
-            gphoto_terminate(data);
+            capture_terminate(data);
             pthread_mutex_lock(&data->camera_mutex);
-            gphoto_init(data);
+            capture_init(data);
             pthread_mutex_unlock(&data->camera_mutex);
             obs_source_update_properties(data->source);
             if(data->autofocus) {
@@ -386,15 +386,15 @@ static void gphoto_show(void *vptr) {
     }
 }
 
-static void gphoto_hide(void *vptr) {
-    struct gphoto_data *data = vptr;
+static void capture_hide(void *vptr) {
+    struct preview_data *data = vptr;
     if(data->source->active) {
-        gphoto_terminate(data);
+        capture_terminate(data);
     }
 }
 
-static void *gphoto_create(obs_data_t *settings, obs_source_t *source){
-    struct gphoto_data *data = bzalloc(sizeof(struct gphoto_data));
+static void *capture_create(obs_data_t *settings, obs_source_t *source){
+    struct preview_data *data = bzalloc(sizeof(struct preview_data));
 
     pthread_mutex_init(&data->camera_mutex, NULL);
 
@@ -402,7 +402,7 @@ static void *gphoto_create(obs_data_t *settings, obs_source_t *source){
     data->gp_context = gp_context_new();
 
     gp_list_new(&data->cam_list);
-    gphoto_cam_list(data);
+    capture_cam_list(data);
 
     data->camera_name = obs_data_get_string(settings, "camera_name");
     data->fps = obs_data_get_int(settings, "fps");
@@ -412,18 +412,18 @@ static void *gphoto_create(obs_data_t *settings, obs_source_t *source){
     gphoto_init_udev();
     signal_handler_t *sh = gphoto_get_udev_signalhandler();
 
-    signal_handler_connect(sh, "device_added", &gphoto_camera_added, data);
-    signal_handler_connect(sh, "device_removed", &gphoto_camera_removed, data);
+    signal_handler_connect(sh, "device_added", &capture_camera_added, data);
+    signal_handler_connect(sh, "device_removed", &capture_camera_removed, data);
     #endif
 
     return data;
 }
 
-static void gphoto_destroy(void *vptr) {
-    struct gphoto_data *data = vptr;
+static void capture_destroy(void *vptr) {
+    struct preview_data *data = vptr;
 
     if(data->source->active){
-        gphoto_terminate(data);
+        capture_terminate(data);
     }
 
     pthread_mutex_destroy(&data->camera_mutex);
@@ -432,21 +432,21 @@ static void gphoto_destroy(void *vptr) {
 
     signal_handler_t *sh = gphoto_get_udev_signalhandler();
 
-    signal_handler_disconnect(sh, "device_added", gphoto_camera_added, data);
-    signal_handler_disconnect(sh, "device_removed", gphoto_camera_removed, data);
+    signal_handler_disconnect(sh, "device_added", capture_camera_added, data);
+    signal_handler_disconnect(sh, "device_removed", capture_camera_removed, data);
 
     gphoto_unref_udev();
 
     bfree(vptr);
 }
 
-static uint32_t gphoto_getwidth(void *vptr) {
-    struct gphoto_data *data = vptr;
+static uint32_t capture_getwidth(void *vptr) {
+    struct preview_data *data = vptr;
     return data->width;
 }
 
-static uint32_t gphoto_getheight(void *vptr) {
-    struct gphoto_data *data = vptr;
+static uint32_t capture_getheight(void *vptr) {
+    struct preview_data *data = vptr;
     return data->height;
 }
 
@@ -455,14 +455,14 @@ struct obs_source_info capture_preview_info = {
     .type           = OBS_SOURCE_TYPE_INPUT,
     .output_flags   = OBS_SOURCE_ASYNC_VIDEO | OBS_SOURCE_DO_NOT_DUPLICATE,
 
-    .get_name       = gphoto_getname,
-    .get_defaults   = gphoto_defaults,
-    .get_properties = gphoto_properties,
-    .create         = gphoto_create,
-    .destroy        = gphoto_destroy,
-    .update         = gphoto_update,
-    .show           = gphoto_show,
-    .hide           = gphoto_hide,
-    .get_width      = gphoto_getwidth,
-    .get_height     = gphoto_getheight,
+    .get_name       = capture_getname,
+    .get_defaults   = capture_defaults,
+    .get_properties = capture_properties,
+    .create         = capture_create,
+    .destroy        = capture_destroy,
+    .update         = capture_update,
+    .show           = capture_show,
+    .hide           = capture_hide,
+    .get_width      = capture_getwidth,
+    .get_height     = capture_getheight,
 };

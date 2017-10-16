@@ -2,7 +2,7 @@
 #include <obs-internal.h>
 #include <gphoto2/gphoto2-camera.h>
 
-struct gphoto_data {
+struct preview_data {
     /* settings */
     const char *camera_name;
     long long int fps;

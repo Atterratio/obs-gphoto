@@ -2,7 +2,7 @@
 #include <obs-internal.h>
 #include <gphoto2/gphoto2-camera.h>
 
-#include "live-preview.h"
+#include "gphoto-preview.h"
 
 static GPPortInfoList		*portinfolist = NULL;
 static CameraAbilitiesList *abilities = NULL;
@@ -335,7 +335,7 @@ int set_autofocus(Camera *camera, GPContext *context){
 
 static bool manual_radio_focus_callback(obs_properties_t *props, obs_property_t *prop, void *vptr){
     UNUSED_PARAMETER(props);
-    struct gphoto_data *data = vptr;
+    struct preview_data *data = vptr;
     const char *value = obs_property_name(prop);
     pthread_mutex_lock(&data->camera_mutex);
     set_manualfocus(value, data->camera, data->gp_context);
