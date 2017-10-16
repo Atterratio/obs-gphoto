@@ -3,7 +3,10 @@
 #include <gphoto2/gphoto2-camera.h>
 
 int gp_camera_by_name(Camera **camera, const char *name, CameraList *cam_list, GPContext *context);
-
+void property_cam_list(CameraList *cam_list, obs_property_t *prop);
+void gphoto_capture_preview(Camera *camera, GPContext *context, int width, int height, uint8_t *texture_data);
+void gphoto_capture(Camera *camera, GPContext *context, int width, int height, uint8_t *texture_data);
+int gphoto_cam_list(CameraList *cam_list, GPContext *context);
 
 int cancel_autofocus(Camera *camera, GPContext *context);
 

@@ -46,7 +46,9 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PLUGIN_BIN_DIRECTORY})
 
 include_directories(src ${LIBOBS_INCLUDE_DIRS} ${Gphoto2_INCLUDE_DIRS} ${ImageMagick_MagickCore_INCLUDE_DIRS} ${UDEV_INCLUDE_DIR})
 
-set(SOURCE_FILES src/obs-gphoto.c src/gphoto-utils.c src/gphoto-utils.h src/gphoto-preview.c ${gphoto-udev_SOURCES} src/gphoto-preview.h src/timelapse.c src/timelapse.h)
+set(SOURCE_FILES src/obs-gphoto.c src/gphoto-utils.c src/gphoto-utils.h ${gphoto-udev_SOURCES}
+        src/gphoto-preview.c src/gphoto-preview.h
+        src/timelapse.c src/timelapse.h)
 add_library(obs-gphoto MODULE ${SOURCE_FILES})
 
 SET_TARGET_PROPERTIES(obs-gphoto PROPERTIES PREFIX "")

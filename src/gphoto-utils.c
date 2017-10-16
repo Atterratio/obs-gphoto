@@ -1,6 +1,7 @@
 #include <obs-module.h>
 #include <obs-internal.h>
 #include <gphoto2/gphoto2-camera.h>
+#include <magick/MagickCore.h>
 
 #include "gphoto-preview.h"
 
@@ -73,6 +74,139 @@ int gp_camera_by_name(Camera **camera, const char *name, CameraList *cam_list, G
         }
     }
     return GP_ERROR;
+}
+
+void property_cam_list(CameraList *cam_list, obs_property_t *prop) {
+    int i, count;
+    const char *camera_name;
+
+    obs_property_list_clear(prop);
+
+    count = gp_list_count(cam_list);
+    blog(LOG_INFO, "Number of cameras: %d\n", count);
+    for (i = 0; i < count; i++) {
+        gp_list_get_name(cam_list, i, &camera_name);
+        obs_property_list_add_string(prop, camera_name, camera_name);
+    }
+}
+
+void gphoto_capture_preview(Camera *camera, GPContext *context, int width, int height, uint8_t *texture_data){
+    CameraFile *cam_file = NULL;
+    const char *image_data = NULL;
+    unsigned long data_size = NULL;
+    Image *image = NULL;
+    ImageInfo *image_info = AcquireImageInfo();
+    ExceptionInfo *exception = AcquireExceptionInfo();
+
+    if (gp_file_new(&cam_file) < GP_OK){
+        blog(LOG_WARNING, "What???\n");
+    }else {
+        if (gp_camera_capture_preview(camera, cam_file, context) < GP_OK) {
+            blog(LOG_DEBUG, "Can't capture preview.\n");
+        } else {
+            if (gp_file_get_data_and_size(cam_file, &image_data, &data_size) < GP_OK) {
+                blog(LOG_WARNING, "Can't get image data.\n");
+            } else {
+                image = BlobToImage(image_info, image_data, data_size, exception);
+                if (exception->severity != UndefinedException) {
+                    CatchException(exception);
+                    blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *)exception->severity);
+                    exception->severity = UndefinedException;
+                } else {
+                    ExportImagePixels(image, 0, 0, (const size_t)width, (const size_t)height, "BGRA", CharPixel, texture_data,
+                                      exception);
+                    if (exception->severity != UndefinedException) {
+                        CatchException(exception);
+                        blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *)exception->severity);
+                        exception->severity = UndefinedException;
+                    }
+                }
+            }
+        }
+    }
+
+    if(image_data){
+        free(image_data);
+    }
+    if(image_info){
+        DestroyImageInfo(image_info);
+    }
+    if(image){
+        DestroyImageList(image);
+    }
+    if(exception){
+        DestroyExceptionInfo(exception);
+    }
+    if(cam_file){
+        //TODO: SIGSEGV here, can't understand why!
+        //gp_file_free(cam_file);
+    }
+}
+
+void gphoto_capture(Camera *camera, GPContext *context, int width, int height, uint8_t *texture_data){
+    CameraFile *cam_file = NULL;
+    CameraFilePath camera_file_path;
+    const char *image_data = NULL;
+    unsigned long data_size = NULL;
+    Image *image = NULL;
+    ImageInfo *image_info = AcquireImageInfo();
+    ExceptionInfo *exception = AcquireExceptionInfo();
+
+    if (gp_file_new(&cam_file) < GP_OK){
+        blog(LOG_WARNING, "What???\n");
+    }else {
+        if (gp_camera_capture(camera, GP_CAPTURE_IMAGE, &camera_file_path, context) < GP_OK) {
+            blog(LOG_WARNING, "Can't capture photo.\n");
+        } else {
+            if (gp_camera_file_get(camera, camera_file_path.folder, camera_file_path.name,
+                                   GP_FILE_TYPE_NORMAL, cam_file, context) < GP_OK) {
+                blog(LOG_WARNING, "Can't get photo from camera.\n");
+            } else {
+                if (gp_file_get_data_and_size(cam_file, &image_data, &data_size) < GP_OK) {
+                    blog(LOG_WARNING, "Can't get image data.\n");
+                } else {
+                    image = BlobToImage(image_info, image_data, data_size, exception);
+                    if (exception->severity != UndefinedException) {
+                        CatchException(exception);
+                        blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *) exception->severity);
+                        exception->severity = UndefinedException;
+                    } else {
+                        ExportImagePixels(image, 0, 0, (const size_t)width, (const size_t)height, "BGRA", CharPixel, texture_data,
+                                          exception);
+                        if (exception->severity != UndefinedException) {
+                            CatchException(exception);
+                            blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *) exception->severity);
+                            exception->severity = UndefinedException;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    if(image_data){
+        free(image_data);
+    }
+    if(image_info){
+        DestroyImageInfo(image_info);
+    }
+    if(image){
+        DestroyImageList(image);
+    }
+    if(exception){
+        DestroyExceptionInfo(exception);
+    }
+    if(cam_file){
+        //TODO: SIGSEGV here, can't understand why!
+        //gp_file_free(cam_file);
+    }
+}
+
+int gphoto_cam_list(CameraList *cam_list, GPContext *context){
+    int ret;
+    gp_list_reset(cam_list);
+    ret = gp_camera_autodetect(cam_list, context);
+    return ret;
 }
 
 int cancel_autofocus(Camera *camera, GPContext *context){
@@ -333,6 +467,31 @@ int set_autofocus(Camera *camera, GPContext *context){
     return ret;
 }
 
+int set_manualfocus(const char *value, Camera *camera, GPContext *context){
+    int ret = -1;
+    CameraWidget *widget = NULL;
+    CameraWidgetType type;
+
+    cancel_autofocus(camera, context);
+
+    if (gp_camera_get_single_config(camera, "manualfocusdrive", &widget, context) < GP_OK) {
+        blog(LOG_WARNING, "Can't get single config manualfocusdrive for camera.\n");
+    } else {
+        if (gp_widget_get_type(widget, &type) < GP_OK) {
+            blog(LOG_WARNING, "Can't get type for config manualfocusdrive.\n");
+        } else {
+            if (type == GP_WIDGET_RADIO){
+                ret = gp_widget_set_value(widget, value);
+            }
+        }
+    }
+    if(widget){
+        ret = gp_camera_set_single_config(camera, "manualfocusdrive", widget, context);
+        gp_widget_free(widget);
+    }
+    return ret;
+}
+
 static bool manual_radio_focus_callback(obs_properties_t *props, obs_property_t *prop, void *vptr){
     UNUSED_PARAMETER(props);
     struct preview_data *data = vptr;
@@ -377,31 +536,6 @@ int create_manualfocus_property(obs_properties_t *props, obs_data_t *settings, C
         }
     }
     if(widget){
-        gp_widget_free(widget);
-    }
-    return ret;
-}
-
-int set_manualfocus(const char *value, Camera *camera, GPContext *context){
-    int ret = -1;
-    CameraWidget *widget = NULL;
-    CameraWidgetType type;
-
-    cancel_autofocus(camera, context);
-
-    if (gp_camera_get_single_config(camera, "manualfocusdrive", &widget, context) < GP_OK) {
-        blog(LOG_WARNING, "Can't get single config manualfocusdrive for camera.\n");
-    } else {
-        if (gp_widget_get_type(widget, &type) < GP_OK) {
-            blog(LOG_WARNING, "Can't get type for config manualfocusdrive.\n");
-        } else {
-            if (type == GP_WIDGET_RADIO){
-                ret = gp_widget_set_value(widget, value);
-            }
-        }
-    }
-    if(widget){
-        ret = gp_camera_set_single_config(camera, "manualfocusdrive", widget, context);
         gp_widget_free(widget);
     }
     return ret;
