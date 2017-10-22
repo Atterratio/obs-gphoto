@@ -2,8 +2,8 @@ cmake_minimum_required(VERSION 2.8)
 project(obs-gphoto)
 set(obs-gphoto_DESCRIPTION "Allows capture DSLR cameras preview through gPhoto in obs-studio on Linux")
 set(obs-gphoto_VERSION_MAJOR 0)
-set(obs-gphoto_VERSION_MINOR 1)
-set(obs-gphoto_VERSION_PATCH 1)
+set(obs-gphoto_VERSION_MINOR 2)
+set(obs-gphoto_VERSION_PATCH 0)
 set(CMAKE_BUILD_TYPE Release)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake/modules/")
@@ -46,7 +46,10 @@ set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${PLUGIN_BIN_DIRECTORY})
 
 include_directories(src ${LIBOBS_INCLUDE_DIRS} ${Gphoto2_INCLUDE_DIRS} ${ImageMagick_MagickCore_INCLUDE_DIRS} ${UDEV_INCLUDE_DIR})
 
-set(SOURCE_FILES src/obs-gphoto.c src/gphoto-utils.c src/gphoto-utils.h src/gphoto-preview.c ${gphoto-udev_SOURCES} src/gphoto-preview.h)
+set(SOURCE_FILES src/obs-gphoto.c src/gphoto-utils.c src/gphoto-utils.h ${gphoto-udev_SOURCES}
+        src/gphoto-preview.c src/gphoto-preview.h
+        src/timelapse.c src/timelapse.h)
+
 add_library(obs-gphoto MODULE ${SOURCE_FILES})
 
 SET_TARGET_PROPERTIES(obs-gphoto PROPERTIES PREFIX "")

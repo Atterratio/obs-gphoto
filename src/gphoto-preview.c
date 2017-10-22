@@ -17,21 +17,6 @@ static void capture_defaults(obs_data_t *settings) {
     obs_data_set_default_int(settings, "fps", 30);
 }
 
-static void capture_property_cam_list(void *vptr, obs_property_t *prop) {
-    struct preview_data *data = vptr;
-    int i, count;
-    const char *camera_name;
-
-    obs_property_list_clear(prop);
-
-    count = gp_list_count(data->cam_list);
-    blog(LOG_INFO, "Number of cameras: %d\n", count);
-    for (i = 0; i < count; i++) {
-        gp_list_get_name(data->cam_list, i, &camera_name);
-        obs_property_list_add_string(prop, camera_name, camera_name);
-    }
-}
-
 static bool capture_camera_selected(obs_properties_t *props, obs_property_t *prop, obs_data_t *settings){
     UNUSED_PARAMETER(props);
     UNUSED_PARAMETER(prop);
@@ -57,7 +42,7 @@ static obs_properties_t *capture_properties(void *vptr){
     if(cam_count > 0) {
         obs_property_t *cam_list = obs_properties_add_list(props, "camera_name", obs_module_text("Camera"),
                                                            OBS_COMBO_TYPE_LIST, OBS_COMBO_FORMAT_STRING);
-        capture_property_cam_list(data, cam_list);
+        property_cam_list(data->cam_list, cam_list);
         obs_property_set_modified_callback(cam_list, capture_camera_selected);
 
 
@@ -91,60 +76,6 @@ static obs_properties_t *capture_properties(void *vptr){
     return props;
 }
 
-static void capture_capture(void *vptr, uint8_t **texture_data){
-    struct preview_data *data = vptr;
-    CameraFile *cam_file = NULL;
-    const char *image_data = NULL;
-    unsigned long data_size = NULL;
-    Image *image = NULL;
-    ImageInfo *image_info = AcquireImageInfo();
-    ExceptionInfo *exception = AcquireExceptionInfo();
-
-    if (gp_file_new(&cam_file) < GP_OK){
-        blog(LOG_WARNING, "What???\n");
-    }else {
-        if (gp_camera_capture_preview(data->camera, cam_file, data->gp_context) < GP_OK) {
-            blog(LOG_DEBUG, "Can't capture preview.\n");
-        } else {
-            if (gp_file_get_data_and_size(cam_file, &image_data, &data_size) < GP_OK) {
-                blog(LOG_WARNING, "Can't get image data.\n");
-            } else {
-                image = BlobToImage(image_info, image_data, data_size, exception);
-                if (exception->severity != UndefinedException) {
-                    CatchException(exception);
-                    blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *)exception->severity);
-                    exception->severity = UndefinedException;
-                } else {
-                    ExportImagePixels(image, 0, 0, data->width, data->height, "BGRA", CharPixel, texture_data,
-                                      exception);
-                    if (exception->severity != UndefinedException) {
-                        CatchException(exception);
-                        blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *)exception->severity);
-                        exception->severity = UndefinedException;
-                    }
-                }
-            }
-        }
-    }
-
-    if(image_data){
-        free(image_data);
-    }
-    if(image_info){
-        DestroyImageInfo(image_info);
-    }
-    if(image){
-        DestroyImageList(image);
-    }
-    if(exception){
-        DestroyExceptionInfo(exception);
-    }
-    if(cam_file){
-        //TODO: SIGSEGV here, can't understand why!
-        //gp_file_free(cam_file);
-    }
-}
-
 static void *capture_thread(void *vptr){
     struct preview_data *data = vptr;
     uint8_t *texture_data = malloc(data->width * data->height * 4);
@@ -161,7 +92,7 @@ static void *capture_thread(void *vptr){
     while (os_event_try(data->event) == EAGAIN){
         frame.timestamp = cur_time;
         pthread_mutex_lock(&data->camera_mutex);
-        capture_capture(data, texture_data);
+        gphoto_capture_preview(data->camera, data->gp_context, data->width, data->height, texture_data);
         pthread_mutex_unlock(&data->camera_mutex);
         obs_source_output_video(data->source, &frame);
         switch (data->fps){
@@ -183,14 +114,6 @@ static void *capture_thread(void *vptr){
     free(texture_data);
 
     return NULL;
-}
-
-static int capture_cam_list(void *vptr){
-    struct preview_data *data = vptr;
-    int ret;
-    gp_list_reset(data->cam_list);
-    ret = gp_camera_autodetect(data->cam_list, data->gp_context);
-    return ret;
 }
 
 static void capture_init(void *vptr){
@@ -325,20 +248,16 @@ static void capture_camera_added(void *vptr, calldata_t *calldata) {
     const char *camera_name;
     if(!data->camera){
         pthread_mutex_lock(&data->camera_mutex);
-        capture_cam_list(data);
+        gphoto_cam_list(data->cam_list, data->gp_context);
         count = gp_list_count(data->cam_list);
         for(i=0; i<count; i++){
             gp_list_get_name(data->cam_list, i, &camera_name);
             if (strcmp(camera_name, data->camera_name) == 0) {
                 capture_init(data);
-                pthread_mutex_unlock(&data->camera_mutex);
                 obs_source_update_properties(data->source);
                 if(data->autofocus) {
-                    pthread_mutex_lock(&data->camera_mutex);
                     set_autofocus(data->camera, data->gp_context);
-                    pthread_mutex_unlock(&data->camera_mutex);
                 }
-                return;
             }
         }
         pthread_mutex_unlock(&data->camera_mutex);
@@ -352,13 +271,12 @@ static void capture_camera_removed(void *vptr, calldata_t *calldata) {
     const char *camera_name;
     if(data->camera){
         pthread_mutex_lock(&data->camera_mutex);
-        capture_cam_list(data);
+        gphoto_cam_list(data->cam_list, data->gp_context);
         pthread_mutex_unlock(&data->camera_mutex);
         count = gp_list_count(data->cam_list);
         for(i=0; i<count; i++){
             gp_list_get_name(data->cam_list, i, &camera_name);
             if (strcmp(camera_name, data->camera_name) == 0) {
-                pthread_mutex_unlock(&data->camera_mutex);
                 return;
             }
         }
@@ -402,7 +320,7 @@ static void *capture_create(obs_data_t *settings, obs_source_t *source){
     data->gp_context = gp_context_new();
 
     gp_list_new(&data->cam_list);
-    capture_cam_list(data);
+    gphoto_cam_list(data->cam_list, data->gp_context);
 
     data->camera_name = obs_data_get_string(settings, "camera_name");
     data->fps = obs_data_get_int(settings, "fps");
