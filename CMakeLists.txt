@@ -25,7 +25,7 @@ endif()
 find_package(ImageMagick COMPONENTS MagickCore)
 if(${ImageMagick_MagickCore_FOUND})
     message(STATUS "MagickCore FOUND")
-else(})
+else()
     message(FATAL_ERROR "MagickCore NOT FOUND")
 endif()
 
