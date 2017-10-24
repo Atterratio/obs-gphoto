@@ -165,14 +165,14 @@ void gphoto_capture(Camera *camera, GPContext *context, int width, int height, u
                 if (gp_file_get_data_and_size(cam_file, &image_data, &data_size) < GP_OK) {
                     blog(LOG_WARNING, "Can't get image data.\n");
                 } else {
+                    gp_camera_file_delete(camera, camera_file_path.folder, camera_file_path.name, context);
                     image = BlobToImage(image_info, image_data, data_size, exception);
                     if (exception->severity != UndefinedException) {
                         CatchException(exception);
                         blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *) exception->severity);
                         exception->severity = UndefinedException;
                     } else {
-                        ExportImagePixels(image, 0, 0, (const size_t)width, (const size_t)height, "BGRA", CharPixel, texture_data,
-                                          exception);
+                        ExportImagePixels(image, 0, 0, (const size_t)width, (const size_t)height, "BGRA", CharPixel, texture_data, exception);
                         if (exception->severity != UndefinedException) {
                             CatchException(exception);
                             blog(LOG_WARNING, "ImageMagic error: %s.\n", (char *) exception->severity);
