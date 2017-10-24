@@ -21,4 +21,7 @@ struct timelapse_data {
     CameraList *cam_list;
     Camera *camera;
     GPContext *gp_context;
+
+    obs_hotkey_id capture_key;
+    uint64_t last_capture_time;
 };
