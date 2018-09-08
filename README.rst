@@ -43,7 +43,7 @@ For ArchLinux:
         
 
 For installation from source:
------------------------------
+=============================
 
 Fedora: 
 -------
