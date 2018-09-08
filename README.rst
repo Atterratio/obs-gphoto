@@ -40,9 +40,19 @@ For ArchLinux:
 
     there is a `package in AUR`_.
         .. _`package in AUR`: https://aur.archlinux.org/packages/obs-gphoto/
+        
 
 For installation from source:
 -----------------------------
-* :code:`cmake . -DSYSTEM_INSTALL=0` for local installation or :code:`cmake . -DSYSTEM_INSTALL=1` for system installation;
-* :code:`make`;
-* :code:`make install`.
+
+Fedora: 
+-------
+Install requirements: :code:`dnf install libgphoto2-devel  obs-studio-devel ImageMagick-devel systemd-devel`
+
+General:
+--------
+* :code:`git clone https://github.com/Atterratio/obs-gphoto`
+* :code:`cd obs-gphoto`
+* :code:`cmake . -DSYSTEM_INSTALL=0` for local installation or :code:`cmake . -DSYSTEM_INSTALL=1` for system installation
+* :code:`make`
+* :code:`make install`
