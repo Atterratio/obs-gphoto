@@ -57,7 +57,7 @@ target_link_libraries(obs-gphoto ${LIBOBS_LIBRARIES} ${Gphoto2_LIBRARIES} ${Imag
 
 # install
 if(${SYSTEM_INSTALL})
-    install(TARGETS obs-gphoto DESTINATION /usr/lib/obs-plugins)
+    install(TARGETS obs-gphoto DESTINATION ${LIBOBS_PLUGIN_DESTINATION})
 else()
     install(DIRECTORY ${PLUGIN_DIRECTORY} DESTINATION $ENV{HOME}/.config/obs-studio/plugins USE_SOURCE_PERMISSIONS)
 endif()
