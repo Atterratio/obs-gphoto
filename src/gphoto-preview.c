@@ -306,9 +306,6 @@ static void capture_show(void *vptr) {
 
 static void capture_hide(void *vptr) {
     struct preview_data *data = vptr;
-    if(data->source->active) {
-        capture_terminate(data);
-    }
 }
 
 static void *capture_create(obs_data_t *settings, obs_source_t *source){
