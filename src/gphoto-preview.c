@@ -183,9 +183,11 @@ static void capture_terminate(void *vptr){
         os_event_destroy(data->event);
     }
 
-    gp_camera_exit(data->camera, data->gp_context);
-    gp_camera_free(data->camera);
-    data->camera = NULL;
+    if(data->camera) {
+        gp_camera_exit(data->camera, data->gp_context);
+        gp_camera_free(data->camera);
+        data->camera = NULL;
+    }
 }
 
 static void capture_update(void *vptr, obs_data_t *settings){
