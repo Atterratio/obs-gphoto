@@ -1,7 +1,7 @@
 #include <obs-module.h>
 #include <obs-internal.h>
 #include <gphoto2/gphoto2-camera.h>
-#include <magick/MagickCore.h>
+#include <MagickCore/MagickCore.h>
 
 #include "gphoto-preview.h"
 

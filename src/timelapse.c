@@ -1,4 +1,4 @@
-#include <magick/MagickCore.h>
+#include <MagickCore/MagickCore.h>
 
 #include "timelapse.h"
 #include "gphoto-utils.h"
