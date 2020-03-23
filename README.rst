@@ -49,6 +49,9 @@ Fedora:
 -------
 Install requirements: :code:`dnf install libgphoto2-devel  obs-studio-devel ImageMagick-devel systemd-devel`
 
+Ubuntu:
+Install requirements: :code:`sudo apt install libgphoto2-dev libmagic-dev libsystemd-dev`
+
 General:
 --------
 * :code:`git clone https://github.com/Atterratio/obs-gphoto`
