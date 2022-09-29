@@ -175,6 +175,9 @@ static void capture_init(void *vptr){
 static void capture_terminate(void *vptr){
     struct preview_data *data = vptr;
 
+    if (!data->camera)
+      return;
+
     if(data->event) {
         os_event_signal(data->event);
         if(data->thread != 0){
