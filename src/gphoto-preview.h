@@ -1,6 +1,6 @@
 #include <obs-module.h>
-#include <obs-internal.h>
 #include <gphoto2/gphoto2-camera.h>
+#include <util/threading.h>
 
 struct preview_data {
     /* settings */

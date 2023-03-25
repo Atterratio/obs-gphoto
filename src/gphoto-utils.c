@@ -1,7 +1,6 @@
 #include <obs-module.h>
-#include <obs-internal.h>
 #include <gphoto2/gphoto2-camera.h>
-#include <magick/MagickCore.h>
+#include <magick/ImageMagick.h>
 
 #include "gphoto-preview.h"
 
@@ -93,7 +92,7 @@ void property_cam_list(CameraList *cam_list, obs_property_t *prop) {
 void gphoto_capture_preview(Camera *camera, GPContext *context, int width, int height, uint8_t *texture_data){
     CameraFile *cam_file = NULL;
     const char *image_data = NULL;
-    unsigned long data_size = NULL;
+    unsigned long data_size = 0;
     Image *image = NULL;
     ImageInfo *image_info = AcquireImageInfo();
     ExceptionInfo *exception = AcquireExceptionInfo();
@@ -126,7 +125,7 @@ void gphoto_capture_preview(Camera *camera, GPContext *context, int width, int h
     }
 
     if(image_data){
-        free(image_data);
+        free((void*)image_data);
     }
     if(image_info){
         DestroyImageInfo(image_info);
@@ -147,7 +146,7 @@ void gphoto_capture(Camera *camera, GPContext *context, int width, int height, u
     CameraFile *cam_file = NULL;
     CameraFilePath camera_file_path;
     const char *image_data = NULL;
-    unsigned long data_size = NULL;
+    unsigned long data_size = 0;
     Image *image = NULL;
     ImageInfo *image_info = AcquireImageInfo();
     ExceptionInfo *exception = AcquireExceptionInfo();
@@ -185,7 +184,7 @@ void gphoto_capture(Camera *camera, GPContext *context, int width, int height, u
     }
 
     if(image_data){
-        free(image_data);
+        free((void *)image_data);
     }
     if(image_info){
         DestroyImageInfo(image_info);

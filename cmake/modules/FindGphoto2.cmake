@@ -40,7 +40,7 @@ endif()
 # handle the QUIETLY and REQUIRED arguments and set GPHOTO2_FOUND to TRUE if
 # all listed variables are TRUE
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(GPHOTO2 DEFAULT_MSG GPHOTO2_LIBRARY GPHOTO2_INCLUDE_DIR)
+find_package_handle_standard_args(Gphoto2 DEFAULT_MSG GPHOTO2_LIBRARY GPHOTO2_INCLUDE_DIR)
 
 IF(GPHOTO2_FOUND)
     SET(Gphoto2_LIBRARIES ${GPHOTO2_LIBRARY} ${GPHOTO2_PORT_LIBRARY})
